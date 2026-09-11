@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bitcoin Transaction Verification</title>
+</head>
+<body>
+
+    <h1>Bitcoin Transaction Verification</h1>
+
+    <form method="POST">
+
+        <label>Sender:</label>
+        <input type="text" name="sender" required>
+        <br><br>
+
+        <label>Receiver:</label>
+        <input type="text" name="receiver" required>
+        <br><br>
+
+        <label>Amount:</label>
+        <input type="number" name="amount" min="1" required>
+        <br><br>
+
+        <button type="submit">Verify Transaction</button>
+
+    </form>
+
+    {% if result %}
+        <h2>Transaction Result</h2>
+
+        {% for message in result %}
+            <p>{{ message }}</p>
+        {% endfor %}
+
+    {% endif %}
+
+</body>
+</html>
