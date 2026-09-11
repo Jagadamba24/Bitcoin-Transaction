@@ -98,47 +98,6 @@
             line-height: 1.6;
         }
 
-        /* Scenario Box */
-        .scenario-box {
-            background: linear-gradient(135deg, rgba(247, 147, 26, 0.1) 0%, rgba(18, 24, 38, 0.75) 100%);
-            border: 1px solid rgba(247, 147, 26, 0.3);
-            border-radius: 1.1rem;
-            padding: 1.25rem 1.6rem;
-            margin-bottom: 1.8rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        .scenario-text {
-            font-size: 0.88rem;
-            line-height: 1.5;
-            color: #e2e8f0;
-            flex: 1;
-        }
-
-        .scenario-text strong {
-            color: var(--accent-bitcoin);
-        }
-
-        .scenario-steps {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .scenario-pill {
-            background: rgba(10, 14, 23, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 0.3rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.76rem;
-            color: #cbd5e1;
-        }
-
         /* Glass Cards */
         .glass-card {
             background: var(--bg-card);
@@ -291,13 +250,6 @@
             margin-bottom: 0.45rem;
         }
 
-        .input-hint {
-            font-size: 0.76rem;
-            color: var(--text-muted);
-            margin-top: 0.35rem;
-            line-height: 1.4;
-        }
-
         input[type="text"],
         input[type="number"] {
             width: 100%;
@@ -350,20 +302,6 @@
             background: linear-gradient(135deg, #ff9f2c, #f7931a);
             transform: translateY(-1px);
             box-shadow: 0 6px 22px rgba(247, 147, 26, 0.4);
-        }
-
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.15);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.35);
-            padding: 0.85rem 1.1rem;
-            font-size: 0.88rem;
-        }
-
-        .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.28);
-            border-color: var(--danger-red);
-            color: #ffffff;
         }
 
         .btn-faucet {
@@ -519,28 +457,6 @@
             font-size: 0.82rem;
         }
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.25rem 0.65rem;
-            border-radius: 9999px;
-            font-size: 0.74rem;
-            font-weight: 600;
-        }
-
-        .status-badge.unspent {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .status-badge.spent {
-            background: rgba(239, 68, 68, 0.15);
-            color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
         .info-banner {
             margin-top: 1.2rem;
             padding: 0.85rem 1.1rem;
@@ -568,25 +484,10 @@
         </div>
         <h1>Bitcoin Transaction Verification</h1>
         <p class="subtitle">
-            Demonstrates the full Bitcoin transaction validation lifecycle: 
+            Demonstrates transaction validation lifecycle: 
             Input Verification &rarr; Digital Signature Verification &rarr; Double Spending Detection &rarr; Block Confirmation.
         </p>
     </header>
-
-    <!-- Generic Scenario Walkthrough Card -->
-    <div class="scenario-box">
-        <div class="scenario-text">
-            <strong>How to Demonstrate Double-Spending:</strong><br>
-            1. <strong>Set Balance</strong>: Enter any user name and an initial balance below.<br>
-            2. <strong>First Send</strong>: Transfer the balance to any receiver &rarr; Balance decreases &rarr; Check Passes ✔.<br>
-            3. <strong>Second Send (Double Spending)</strong>: Attempt to send again with no balance remaining &rarr; <strong>Double Spending Detected ❌</strong>!
-            <div class="scenario-steps">
-                <span class="scenario-pill">&#9312; Set Any User Balance</span>
-                <span class="scenario-pill">&#9313; Send Funds (Passes ✔)</span>
-                <span class="scenario-pill">&#9314; Send Again (Double Spend ❌)</span>
-            </div>
-        </div>
-    </div>
 
     <!-- Wallet Balances & Balance Setup Bar -->
     <div class="glass-card">
@@ -598,7 +499,7 @@
                 Participant Account Balances
             </div>
             <span style="font-size: 0.78rem; color: var(--text-muted);">
-                Click any wallet card to auto-fill as sender
+                Click any wallet card to select as sender
             </span>
         </div>
 
@@ -618,20 +519,20 @@
             </div>
         {% else %}
             <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1rem;">
-                No active balances. Enter an account name and balance below to get started.
+                No active accounts yet. Enter an account name and balance below to get started.
             </p>
         {% endif %}
 
-        <!-- Set Account Balance Form (No hardcoded values) -->
+        <!-- Set Account Balance Form -->
         <div class="balance-setup-bar">
             <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-bitcoin);">&#128176; Set Account Balance:</span>
             <form action="/set_balance" method="POST">
-                <input type="text" name="user" id="faucetUser" placeholder="Enter Account Name" required value="" style="width: 170px;">
-                <input type="number" name="balance" id="faucetBalance" placeholder="Enter Balance" min="1" required value="" style="width: 120px;">
+                <input type="text" name="user" id="faucetUser" placeholder="Account Name" required value="" style="width: 170px;">
+                <input type="number" name="balance" id="faucetBalance" placeholder="Initial Balance" min="1" required value="" style="width: 130px;">
                 <button type="submit" class="btn-faucet">&#43; Set Balance</button>
             </form>
             <form action="/reset" method="POST" style="margin-left: auto;">
-                <button type="submit" class="btn-outline" title="Reset all transactions and spent logs">
+                <button type="submit" class="btn-outline" title="Reset all transactions and clear database">
                     &#x21bb; Reset Blockchain
                 </button>
             </form>
@@ -641,7 +542,7 @@
     <!-- Main Grid: Transaction Form & Pipeline Results -->
     <div class="grid">
         
-        <!-- Left: Transaction Form (No hardcoded values) -->
+        <!-- Left: Transaction Form -->
         <div class="glass-card">
             <div class="card-header">
                 <div class="card-title">
@@ -669,21 +570,9 @@
                     <input type="number" id="amountInput" name="amount" value="{{ amount }}" min="1" required placeholder="Enter amount">
                 </div>
 
-                <!-- Transaction ID to spend (UTXO - Optional) -->
-                <div class="form-group">
-                    <label for="txidInput">Transaction Output ID to Spend (Optional):</label>
-                    <input type="number" id="txidInput" name="txid" value="" placeholder="Auto-detected from sender's balance">
-                    <div class="input-hint">
-                        Leave blank to auto-detect from sender's balance. If sender's balance is 0, sending again will trigger <strong>Double Spending Detected</strong>!
-                    </div>
-                </div>
-
                 <div class="btn-group">
                     <button type="submit" class="btn-primary" id="btnVerify">
                         &#10003; Verify Transaction
-                    </button>
-                    <button type="button" class="btn-danger" onclick="triggerImmediateDoubleSpend()" title="Attempts to spend the entered sender's balance again">
-                        &#9888; Test Double Spend
                     </button>
                 </div>
 
@@ -700,11 +589,11 @@
                     Verification Pipeline
                 </div>
                 {% if status == 'success' %}
-                    <span class="status-badge unspent">&#10004; Verified & Added</span>
+                    <span class="badge-tag" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); margin:0;">&#10004; Verified & Added</span>
                 {% elif status == 'danger' %}
-                    <span class="status-badge spent">&#10008; Double Spend Blocked</span>
+                    <span class="badge-tag" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); margin:0;">&#10008; Double Spend Blocked</span>
                 {% elif status == 'error' %}
-                    <span class="status-badge spent">&#10008; Verification Failed</span>
+                    <span class="badge-tag" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); margin:0;">&#10008; Verification Failed</span>
                 {% else %}
                     <span class="badge-tag" style="margin:0; font-size: 0.7rem;">Idle</span>
                 {% endif %}
@@ -732,14 +621,14 @@
                         <span>&#9888;</span>
                         <div>
                             <strong>Double Spending Attack Prevented!</strong><br>
-                            The sender has already spent their balance/coin in a previous block. The node rejected this duplicate spend to prevent unauthorized money creation!
+                            The sender has already spent their balance or sent this duplicate payment. The blockchain node rejected this transaction to prevent unauthorized coin creation!
                         </div>
                     </div>
                 {% elif status == 'success' %}
                     <div class="info-banner">
                         <span>&#9432;</span>
                         <div>
-                            <strong>Transaction Confirmed:</strong> Transaction cryptographically verified, double-spending check passed, balance transferred, and block added to the chain.
+                            <strong>Transaction Confirmed:</strong> Transaction verified, balance deducted from sender, credited to receiver, and new block added to the chain.
                         </div>
                     </div>
                 {% endif %}
@@ -759,14 +648,14 @@
 
     </div>
 
-    <!-- Ledger & UTXO Tracker Section -->
+    <!-- Ledger Section -->
     <div class="glass-card">
         <div class="card-header">
             <div class="card-title">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                 </svg>
-                Blockchain Ledger & UTXO Tracker
+                Blockchain Confirmed Blocks
             </div>
             <div style="font-size: 0.8rem; color: var(--text-muted);">
                 Total Confirmed Blocks: <strong>{{ ledger|length }}</strong>
@@ -778,12 +667,11 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Tx ID</th>
+                            <th>Block # / Tx ID</th>
                             <th>Sender</th>
                             <th>Receiver</th>
                             <th>Amount</th>
                             <th>Digital Signature</th>
-                            <th>UTXO Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -794,14 +682,7 @@
                                 <td><strong style="color: #93c5fd;">{{ tx.receiver }}</strong></td>
                                 <td class="mono" style="color: var(--accent-bitcoin); font-weight: 600;">{{ tx.amount }}</td>
                                 <td class="mono" style="color: var(--text-muted); font-size: 0.72rem;" title="{{ tx.signature }}">
-                                    {{ tx.signature[:14] }}...{{ tx.signature[-8:] }}
-                                </td>
-                                <td>
-                                    {% if tx.is_spent %}
-                                        <span class="status-badge spent">&#10008; Spent</span>
-                                    {% else %}
-                                        <span class="status-badge unspent">&#10004; Unspent</span>
-                                    {% endif %}
+                                    {{ tx.signature[:16] }}...{{ tx.signature[-8:] }}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -811,7 +692,7 @@
         {% else %}
             <div class="empty-pipeline" style="padding: 2rem 1rem;">
                 <p>No transactions confirmed on the blockchain yet.</p>
-                <p style="font-size: 0.8rem; margin-top: 0.35rem; color: #6b7280;">Set any user's account balance above to begin the demo.</p>
+                <p style="font-size: 0.8rem; margin-top: 0.35rem; color: #6b7280;">Set any user's balance above to begin.</p>
             </div>
         {% endif %}
     </div>
@@ -822,17 +703,6 @@
     function selectSender(user) {
         document.getElementById('senderInput').value = user;
         document.getElementById('senderInput').focus();
-    }
-
-    function triggerImmediateDoubleSpend() {
-        const sender = document.getElementById('senderInput').value.trim();
-        if (!sender) {
-            alert('Please enter a sender name first!');
-            document.getElementById('senderInput').focus();
-            return;
-        }
-        document.getElementById('txidInput').value = '';
-        document.getElementById('txForm').submit();
     }
 </script>
 

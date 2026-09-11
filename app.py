@@ -10,10 +10,10 @@ from blockchain import (
     get_spent_ids,
     get_unspent_ids,
     get_wallet_balances,
-    get_user_utxos,
-    get_sender_spend_candidate,
+    get_user_balance,
     set_account_balance,
-    faucet_mint,
+    deduct_balance,
+    credit_balance,
     reset_database
 )
 
@@ -24,43 +24,29 @@ app = Flask(__name__)
 def index():
     result = []
     status = "info"
-    submitted_txid = None
 
     ledger = get_ledger()
-    spent_ids = get_spent_ids()
-    unspent_ids = get_unspent_ids()
     wallet_balances = get_wallet_balances()
 
-    # Pre-select next logical txid: first unspent tx or 1 if empty
-    suggested_txid = unspent_ids[0] if unspent_ids else (len(ledger) + 1 if ledger else 1)
+    sender = ""
+    receiver = ""
+    amount_raw = ""
 
     if request.method == "POST":
         sender = request.form.get("sender", "").strip()
         receiver = request.form.get("receiver", "").strip()
-        amount_raw = request.form.get("amount", "0").strip()
-        txid_raw = request.form.get("txid", "").strip()
+        amount_raw = request.form.get("amount", "").strip()
 
         try:
             amount = int(amount_raw)
         except ValueError:
             amount = 0
 
-        # Auto-detect UTXO if user didn't manually specify one
-        if txid_raw:
-            try:
-                txid = int(txid_raw)
-            except ValueError:
-                txid = 1
-        else:
-            txid = get_sender_spend_candidate(sender)
-
-        submitted_txid = txid
-
         # 1. Transaction Created
         message, signature = create_transaction(sender, receiver, amount)
         result.append("Transaction Created ✔")
 
-        # 2. Input verification (verifies sender name and positive amount)
+        # 2. Input verification
         input_check = verify_input(sender, amount)
         if input_check:
             result.append("Input Verified ✔")
@@ -71,14 +57,10 @@ def index():
                 result=result,
                 status="error",
                 ledger=get_ledger(),
-                spent_ids=get_spent_ids(),
-                unspent_ids=get_unspent_ids(),
                 wallet_balances=get_wallet_balances(),
-                suggested_txid=suggested_txid,
                 sender=sender,
                 receiver=receiver,
-                amount=amount_raw,
-                txid=submitted_txid
+                amount=amount_raw
             )
 
         # 3. Signature verification
@@ -91,63 +73,53 @@ def index():
                 result=result,
                 status="error",
                 ledger=get_ledger(),
-                spent_ids=get_spent_ids(),
-                unspent_ids=get_unspent_ids(),
                 wallet_balances=get_wallet_balances(),
-                suggested_txid=suggested_txid,
                 sender=sender,
                 receiver=receiver,
-                amount=amount_raw,
-                txid=submitted_txid
+                amount=amount_raw
             )
 
-        # 4. Double spending check (detects duplicate send to same person OR re-spending a spent coin)
-        if double_spending(txid, sender=sender, receiver=receiver, amount=amount):
-            result.append(f"Double Spending Check Passed ✔ (Sender '{sender}' transferred {amount} to '{receiver}')")
+        # 4. Double spending check (detects duplicate send to same person OR spending more than balance)
+        is_valid, ds_msg = double_spending(sender=sender, receiver=receiver, amount=amount)
+        if is_valid:
+            result.append(f"Double Spending Check Passed ✔ ({amount} coins available & unspent)")
         else:
-            result.append(f"Double Spending Detected ❌ (Sender '{sender}' already sent {amount} to '{receiver}' / Coin was already spent!)")
+            result.append(f"Double Spending Detected ❌ ({ds_msg})")
             return render_template(
                 "index.html",
                 result=result,
                 status="danger",
                 ledger=get_ledger(),
-                spent_ids=get_spent_ids(),
-                unspent_ids=get_unspent_ids(),
                 wallet_balances=get_wallet_balances(),
-                suggested_txid=suggested_txid,
                 sender=sender,
                 receiver=receiver,
-                amount=amount_raw,
-                txid=submitted_txid
+                amount=amount_raw
             )
-
 
         # 5. Add Block to Blockchain and record confirmed transaction
         block = add_block(message)
         record_transaction(sender, receiver, amount, signature)
+        
+        # Deduct sender balance and credit receiver balance
+        deduct_balance(sender, amount)
+        credit_balance(receiver, amount)
+
         result.append(f"Block Added to Blockchain ✔ (hash: {block[:10]}...)")
         status = "success"
 
-        # Refresh ledger and balance state after transaction
+        # Refresh ledger and balances after transaction
         ledger = get_ledger()
-        spent_ids = get_spent_ids()
-        unspent_ids = get_unspent_ids()
         wallet_balances = get_wallet_balances()
-        suggested_txid = unspent_ids[0] if unspent_ids else (len(ledger) + 1)
 
     return render_template(
         "index.html",
         result=result,
         status=status,
         ledger=ledger,
-        spent_ids=spent_ids,
-        unspent_ids=unspent_ids,
         wallet_balances=wallet_balances,
-        suggested_txid=suggested_txid,
-        sender="",
-        receiver="",
-        amount="",
-        txid=suggested_txid
+        sender=sender,
+        receiver=receiver,
+        amount=amount_raw
     )
 
 
@@ -165,20 +137,6 @@ def set_balance():
     return redirect(url_for("index"))
 
 
-@app.route("/faucet", methods=["POST"])
-def faucet():
-    receiver = request.form.get("faucet_user", "").strip()
-    amount_raw = request.form.get("faucet_amount", "").strip()
-    try:
-        amount = int(amount_raw)
-    except ValueError:
-        amount = 0
-
-    if receiver and amount > 0:
-        faucet_mint(receiver, amount)
-    return redirect(url_for("index"))
-
-
 @app.route("/reset", methods=["POST"])
 def reset():
     reset_database()
@@ -187,6 +145,3 @@ def reset():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
-

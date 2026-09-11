@@ -27,11 +27,17 @@ txid INTEGER
 )
 """)
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS accounts(
+username TEXT PRIMARY KEY COLLATE NOCASE,
+balance INTEGER
+)
+""")
+
 conn.commit()
 
 
 def create_transaction(sender, receiver, amount):
-
     message = f"{sender}->{receiver}:{amount}".encode()
 
     signature = private_key.sign(
@@ -68,44 +74,18 @@ class VerifyResult:
         return f"<VerifyResult valid={self.valid} message='{self.message}'>"
 
 
-def verify_input(sender, amount, txid=None):
-
+def verify_input(sender, amount):
     if not sender or str(sender).strip() == "":
         return VerifyResult(False, "Sender name cannot be empty.")
 
     if amount <= 0:
-        return VerifyResult(False, f"Transaction amount must be positive (> 0 BTC). Received: {amount}.")
-
-    # If an existing transaction ID is being spent, verify ownership and sufficient balance in that UTXO
-    if txid is not None:
-        try:
-            tx_id_int = int(txid)
-            cursor.execute("SELECT receiver, amount FROM transactions WHERE id = ?", (tx_id_int,))
-            row = cursor.fetchone()
-            if row:
-                utxo_owner, utxo_amount = row[0], row[1]
-                # Check ownership (case-insensitive)
-                if sender.strip().lower() != utxo_owner.strip().lower():
-                    return VerifyResult(
-                        False, 
-                        f"Sender '{sender}' is not the owner of Tx #{tx_id_int}. (UTXO belongs to '{utxo_owner}')."
-                    )
-                # Check sufficient funds in this UTXO
-                if amount > utxo_amount:
-                    return VerifyResult(
-                        False, 
-                        f"Insufficient funds in Tx #{tx_id_int}: Requested {amount} BTC, but UTXO only holds {utxo_amount} BTC."
-                    )
-        except (ValueError, TypeError):
-            pass
+        return VerifyResult(False, f"Transaction amount must be positive (> 0). Received: {amount}.")
 
     return VerifyResult(True, "Input Verified ✔")
 
 
 def verify_signature(message, signature):
-
     try:
-
         public_key.verify(
             signature,
             message,
@@ -115,45 +95,100 @@ def verify_signature(message, signature):
             ),
             hashes.SHA256()
         )
-
         return True
-
     except Exception:
         return False
 
 
-def double_spending(txid=None, sender=None, receiver=None, amount=None):
+def get_user_balance(username):
+    cursor.execute("SELECT balance FROM accounts WHERE LOWER(username) = LOWER(?)", (username.strip(),))
+    row = cursor.fetchone()
+    return row[0] if row else 0
 
-    # 1. Check if the exact same transaction (same sender, same receiver, same amount) was already sent
-    if sender and receiver and amount and sender.strip().upper() != "COINBASE_FAUCET":
+
+def set_account_balance(username, amount):
+    clean_user = username.strip()
+    cursor.execute(
+        "INSERT OR REPLACE INTO accounts(username, balance) VALUES(?, ?)",
+        (clean_user, amount)
+    )
+    conn.commit()
+    # Create and record funding block on the blockchain
+    message, signature = create_transaction("COINBASE_MINT", clean_user, amount)
+    add_block(message)
+    record_transaction("COINBASE_MINT", clean_user, amount, signature)
+    return amount
+
+
+
+def deduct_balance(username, amount):
+    clean_user = username.strip()
+    current = get_user_balance(clean_user)
+    new_balance = max(0, current - amount)
+    cursor.execute("UPDATE accounts SET balance = ? WHERE LOWER(username) = LOWER(?)", (new_balance, clean_user))
+    conn.commit()
+    return new_balance
+
+
+def credit_balance(username, amount):
+    clean_user = username.strip()
+    cursor.execute("SELECT balance FROM accounts WHERE LOWER(username) = LOWER(?)", (clean_user,))
+    row = cursor.fetchone()
+    if row:
+        new_balance = row[0] + amount
+        cursor.execute("UPDATE accounts SET balance = ? WHERE LOWER(username) = LOWER(?)", (new_balance, clean_user))
+    else:
+        new_balance = amount
+        cursor.execute("INSERT INTO accounts(username, balance) VALUES(?, ?)", (clean_user, amount))
+    conn.commit()
+    return new_balance
+
+
+def get_wallet_balances():
+    """
+    Returns live account balances for all participants who have set a balance or received funds.
+    """
+    cursor.execute("SELECT username, balance FROM accounts WHERE balance > 0 ORDER BY balance DESC")
+    rows = cursor.fetchall()
+    return {row[0]: row[1] for row in rows}
+
+
+def double_spending(txid=None, sender=None, receiver=None, amount=None):
+    clean_sender = sender.strip() if sender else ""
+    clean_receiver = receiver.strip() if receiver else ""
+
+    # Check 1: Sending the EXACT same amount to the exact same receiver is detected as double-spending
+    if clean_sender and clean_receiver and amount and clean_sender.upper() != "COINBASE_MINT":
         cursor.execute(
             "SELECT id FROM transactions WHERE LOWER(sender) = LOWER(?) AND LOWER(receiver) = LOWER(?) AND amount = ?",
-            (sender.strip(), receiver.strip(), amount)
+            (clean_sender, clean_receiver, amount)
         )
         duplicate_tx = cursor.fetchone()
         if duplicate_tx:
-            # Double spending detected: sender is re-sending the exact same amount to the same person!
-            return False
+            return False, f"Sender '{clean_sender}' has already sent {amount} to '{clean_receiver}' in Tx #{duplicate_tx[0]}!"
 
-    # 2. Check if this specific UTXO (txid) has already been spent
+    # Check 2: Check if sender has enough balance
+    if clean_sender and amount and clean_sender.upper() != "COINBASE_MINT":
+        sender_bal = get_user_balance(clean_sender)
+        if sender_bal <= 0:
+            return False, f"Sender '{clean_sender}' has already spent all available funds (Balance is 0)!"
+        if amount > sender_bal:
+            return False, f"Sender '{clean_sender}' only has {sender_bal} balance, cannot spend {amount}!"
+
+    # Check 3: Check if explicit txid was already spent
     if txid is not None:
         cursor.execute("SELECT * FROM spent WHERE txid=?", (txid,))
-        result = cursor.fetchone()
-
-        if result:
-            return False
+        if cursor.fetchone():
+            return False, f"Transaction Output #{txid} has already been spent!"
 
         cursor.execute("INSERT INTO spent(txid) VALUES (?)", (txid,))
         conn.commit()
 
-    return True
-
+    return True, "Double Spending Check Passed ✔"
 
 
 def add_block(message):
-
     block_hash = hashlib.sha256(message).hexdigest()
-
     return block_hash
 
 
@@ -189,97 +224,9 @@ def get_unspent_ids():
     return [txid for txid in all_ids if txid not in spent_set]
 
 
-def get_wallet_balances():
-    """
-    Calculates the live wallet balance for all users based on Unspent Transaction Outputs (UTXOs).
-    Balance(user) = sum(amount for all unspent transactions where receiver == user)
-    """
-    spent_set = set(get_spent_ids())
-    cursor.execute("SELECT id, receiver, amount FROM transactions ORDER BY id ASC")
-    rows = cursor.fetchall()
-
-    balances = {}
-    for tx_id, receiver, amount in rows:
-        if tx_id not in spent_set:
-            user_key = receiver.strip()
-            balances[user_key] = balances.get(user_key, 0) + amount
-    return balances
-
-
-def get_user_utxos(user_name=None):
-    """
-    Returns unspent transaction outputs (UTXOs).
-    If user_name is specified, filters only for that recipient.
-    """
-    spent_set = set(get_spent_ids())
-    cursor.execute("SELECT id, sender, receiver, amount FROM transactions ORDER BY id ASC")
-    rows = cursor.fetchall()
-
-    utxos = []
-    for tx_id, sender, receiver, amount in rows:
-        if tx_id not in spent_set:
-            if not user_name or receiver.strip().lower() == user_name.strip().lower():
-                utxos.append({
-                    "txid": tx_id,
-                    "sender": sender,
-                    "receiver": receiver,
-                    "amount": amount
-                })
-    return utxos
-
-
-def faucet_mint(receiver, amount=100):
-    """
-    Creates a Coinbase / Faucet transaction to credit initial BTC to a user.
-    """
-    clean_receiver = receiver.strip()
-    message, signature = create_transaction("COINBASE_FAUCET", clean_receiver, amount)
-    add_block(message)
-    tx_id = record_transaction("COINBASE_FAUCET", clean_receiver, amount, signature)
-    return tx_id
-
-
-def set_account_balance(user_name, amount=100):
-    """
-    Sets or resets an account balance for a user by minting a fresh unspent transaction.
-    """
-    clean_user = user_name.strip()
-    return faucet_mint(clean_user, amount)
-
-
-def get_sender_spend_candidate(sender_name):
-    """
-    Auto-detects which transaction output (UTXO) the sender is attempting to spend:
-    1. If the sender has an unspent UTXO, returns that unspent txid.
-    2. If all of the sender's UTXOs are already spent, returns their most recent spent txid,
-       which will accurately trigger Double Spending Detection!
-    3. If the sender never had any transaction, returns 1.
-    """
-    clean_sender = sender_name.strip().lower()
-    spent_set = set(get_spent_ids())
-    
-    cursor.execute("SELECT id, receiver, amount FROM transactions ORDER BY id DESC")
-    rows = cursor.fetchall()
-    
-    sender_rows = [r for r in rows if r[1].strip().lower() == clean_sender]
-    
-    if not sender_rows:
-        return 1
-    
-    # Check for unspent coin
-    for tx_id, receiver, amount in sender_rows:
-        if tx_id not in spent_set:
-            return tx_id
-            
-    # All coins have been spent -> return the spent txid to demonstrate double spending!
-    return sender_rows[0][0]
-
-
 def reset_database():
     cursor.execute("DELETE FROM transactions")
     cursor.execute("DELETE FROM spent")
-    cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'spent')")
+    cursor.execute("DELETE FROM accounts")
+    cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'spent', 'accounts')")
     conn.commit()
-
-
-
