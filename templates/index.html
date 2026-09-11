@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitcoin Transaction Verification, UTXO Balances & Double Spending Defense</title>
+    <title>Bitcoin Transaction Verification & Double Spending Defense</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -53,7 +53,7 @@
 
         header {
             text-align: center;
-            margin-bottom: 2.2rem;
+            margin-bottom: 2rem;
         }
 
         .badge-tag {
@@ -96,6 +96,47 @@
             max-width: 720px;
             margin: 0 auto;
             line-height: 1.6;
+        }
+
+        /* Scenario Box */
+        .scenario-box {
+            background: linear-gradient(135deg, rgba(247, 147, 26, 0.1) 0%, rgba(18, 24, 38, 0.75) 100%);
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            border-radius: 1.1rem;
+            padding: 1.25rem 1.6rem;
+            margin-bottom: 1.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .scenario-text {
+            font-size: 0.88rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+            flex: 1;
+        }
+
+        .scenario-text strong {
+            color: var(--accent-bitcoin);
+        }
+
+        .scenario-steps {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .scenario-pill {
+            background: rgba(10, 14, 23, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.3rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.76rem;
+            color: #cbd5e1;
         }
 
         /* Glass Cards */
@@ -195,8 +236,8 @@
             font-weight: 700;
         }
 
-        /* Faucet Section */
-        .faucet-bar {
+        /* Balance Setup Bar */
+        .balance-setup-bar {
             display: flex;
             align-items: center;
             gap: 0.8rem;
@@ -207,7 +248,7 @@
             flex-wrap: wrap;
         }
 
-        .faucet-bar form {
+        .balance-setup-bar form {
             display: flex;
             align-items: center;
             gap: 0.6rem;
@@ -215,7 +256,7 @@
             flex-wrap: wrap;
         }
 
-        .faucet-bar input {
+        .balance-setup-bar input {
             background: var(--bg-input);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 0.5rem;
@@ -277,46 +318,6 @@
             box-shadow: 0 0 0 3px var(--accent-bitcoin-glow);
         }
 
-        .chips-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            margin-top: 0.5rem;
-        }
-
-        .chip {
-            padding: 0.25rem 0.65rem;
-            border-radius: 0.5rem;
-            font-size: 0.74rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            border: 1px solid transparent;
-        }
-
-        .chip.unspent {
-            background: rgba(16, 185, 129, 0.12);
-            color: #34d399;
-            border-color: rgba(16, 185, 129, 0.3);
-        }
-
-        .chip.unspent:hover {
-            background: rgba(16, 185, 129, 0.25);
-            transform: translateY(-1px);
-        }
-
-        .chip.spent {
-            background: rgba(239, 68, 68, 0.12);
-            color: #f87171;
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-
-        .chip.spent:hover {
-            background: rgba(239, 68, 68, 0.25);
-            transform: translateY(-1px);
-        }
-
         .btn-group {
             display: flex;
             gap: 0.8rem;
@@ -366,7 +367,7 @@
         }
 
         .btn-faucet {
-            background: rgba(247, 147, 26, 0.2);
+            background: rgba(247, 147, 26, 0.25);
             color: #fbd38d;
             border: 1px solid rgba(247, 147, 26, 0.4);
             padding: 0.45rem 0.9rem;
@@ -540,23 +541,6 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        .action-link {
-            color: var(--accent-bitcoin);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.78rem;
-            cursor: pointer;
-            padding: 0.25rem 0.55rem;
-            border-radius: 0.4rem;
-            border: 1px solid rgba(247, 147, 26, 0.2);
-            transition: all 0.15s;
-        }
-
-        .action-link:hover {
-            background: rgba(247, 147, 26, 0.15);
-            border-color: var(--accent-bitcoin);
-        }
-
         .info-banner {
             margin-top: 1.2rem;
             padding: 0.85rem 1.1rem;
@@ -589,17 +573,35 @@
         </p>
     </header>
 
-    <!-- Wallet Balances & Faucet Bar -->
+    <!-- Scenario Walkthrough Card -->
+    <div class="scenario-box">
+        <div class="scenario-text">
+            <strong>Demonstration Scenario:</strong><br>
+            1. <strong>Set Balance</strong>: Jyothi sets her account balance to <strong>100</strong>.<br>
+            2. <strong>First Send</strong>: Jyothi sends 100 to Yasha &rarr; Balance decreases to <strong>0</strong> &rarr; Check Passes ✔.<br>
+            3. <strong>Second Send (Double Spending)</strong>: Jyothi tries to send 100 to Yasha again &rarr; Balance is 0 &rarr; <strong>Double Spending Detected ❌</strong>!
+            <div class="scenario-steps">
+                <span class="scenario-pill">&#9312; Set Balance: Jyothi = 100</span>
+                <span class="scenario-pill">&#9313; Send 100 to Yasha (Passes ✔)</span>
+                <span class="scenario-pill">&#9314; Send 100 again (Double Spend ❌)</span>
+            </div>
+        </div>
+        <button type="button" class="btn-danger" onclick="simulateFullAttack()" style="font-size: 0.82rem; padding: 0.65rem 1rem;">
+            &#9888; Run Jyothi Double Spend
+        </button>
+    </div>
+
+    <!-- Wallet Balances & Balance Setup Bar -->
     <div class="glass-card">
         <div class="card-header">
             <div class="card-title">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                 </svg>
-                Participant Wallet Balances (Unspent UTXOs)
+                Participant Account Balances
             </div>
             <span style="font-size: 0.78rem; color: var(--text-muted);">
-                Click any wallet to select as sender
+                Click any wallet card to select as sender
             </span>
         </div>
 
@@ -612,24 +614,24 @@
                             <span style="font-size: 0.7rem; color: var(--accent-bitcoin);">&#x27A4; Send</span>
                         </div>
                         <div class="wallet-balance">
-                            {{ balance }} <span>BTC</span>
+                            {{ balance }} <span>Rupees / BTC</span>
                         </div>
                     </div>
                 {% endfor %}
             </div>
         {% else %}
             <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1rem;">
-                No unspent balances available. Use the Faucet below to mint initial test BTC.
+                No active balances. Set an account balance below to get started.
             </p>
         {% endif %}
 
-        <!-- Faucet Form -->
-        <div class="faucet-bar">
-            <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-bitcoin);">&#9889; Testnet Faucet:</span>
-            <form action="/faucet" method="POST">
-                <input type="text" name="faucet_user" placeholder="Recipient (e.g. jyothi)" required value="jyothi" style="width: 140px;">
-                <input type="number" name="faucet_amount" placeholder="Amount" value="100" min="1" required style="width: 90px;">
-                <button type="submit" class="btn-faucet">&#43; Mint Test BTC</button>
+        <!-- Set Account Balance Form -->
+        <div class="balance-setup-bar">
+            <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-bitcoin);">&#128176; Set Account Balance:</span>
+            <form action="/set_balance" method="POST">
+                <input type="text" name="user" id="faucetUser" placeholder="Account Name (e.g. Jyothi)" required value="Jyothi" style="width: 140px;">
+                <input type="number" name="balance" id="faucetBalance" placeholder="Balance" value="100" min="1" required style="width: 100px;">
+                <button type="submit" class="btn-faucet">&#43; Set Balance</button>
             </form>
             <form action="/reset" method="POST" style="margin-left: auto;">
                 <button type="submit" class="btn-outline" title="Reset all transactions and spent logs">
@@ -649,60 +651,43 @@
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    New Transaction
+                    Send Transaction
                 </div>
             </div>
 
             <form method="POST" id="txForm">
                 
-                <!-- Transaction ID to spend (UTXO) -->
-                <div class="form-group">
-                    <label for="txidInput">Transaction ID to Spend (UTXO):</label>
-                    <input type="number" id="txidInput" name="txid" value="{{ txid if txid else suggested_txid }}" min="1" required placeholder="e.g. 1">
-                    <div class="input-hint">
-                        Select an unspent Tx ID to verify successfully, or select an already-spent Tx ID to test <strong>Double Spending Detection</strong>.
-                    </div>
-                    
-                    {% if spent_ids or unspent_ids %}
-                    <div class="chips-container">
-                        {% for uid in unspent_ids %}
-                            <span class="chip unspent" onclick="selectTxid({{ uid }})" title="Click to spend unspent Tx #{{ uid }}">
-                                &#10003; Spend Tx #{{ uid }} (Unspent)
-                            </span>
-                        {% endfor %}
-                        {% for sid in spent_ids %}
-                            <span class="chip spent" onclick="selectTxid({{ sid }})" title="Click to trigger double-spending on Tx #{{ sid }}">
-                                &#9888; Tx #{{ sid }} (Already Spent)
-                            </span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
-
                 <div class="form-group">
                     <label for="senderInput">Sender Name:</label>
-                    <input type="text" id="senderInput" name="sender" value="{{ sender if sender else 'jyothi' }}" required placeholder="e.g. Alice">
+                    <input type="text" id="senderInput" name="sender" value="{{ sender if sender else 'Jyothi' }}" required placeholder="e.g. Jyothi">
                 </div>
 
                 <div class="form-group">
                     <label for="receiverInput">Receiver Name:</label>
-                    <input type="text" id="receiverInput" name="receiver" value="{{ receiver if receiver else 'yasha' }}" required placeholder="e.g. Bob">
+                    <input type="text" id="receiverInput" name="receiver" value="{{ receiver if receiver else 'Yasha' }}" required placeholder="e.g. Yasha">
                 </div>
 
                 <div class="form-group">
-                    <label for="amountInput">Amount (BTC):</label>
-                    <input type="number" id="amountInput" name="amount" value="{{ amount if amount else '50' }}" min="1" required placeholder="e.g. 10">
+                    <label for="amountInput">Amount (Rupees / BTC):</label>
+                    <input type="number" id="amountInput" name="amount" value="{{ amount if amount else '100' }}" min="1" required placeholder="e.g. 100">
+                </div>
+
+                <!-- Transaction ID to spend (UTXO - Optional) -->
+                <div class="form-group">
+                    <label for="txidInput">Transaction Output ID to Spend (Optional):</label>
+                    <input type="number" id="txidInput" name="txid" value="" placeholder="Auto-detected from sender's balance">
+                    <div class="input-hint">
+                        Leave blank to automatically spend Jyothi's coin. If Jyothi has 0 balance, sending again will auto-trigger <strong>Double Spending Detected</strong>!
+                    </div>
                 </div>
 
                 <div class="btn-group">
                     <button type="submit" class="btn-primary" id="btnVerify">
                         &#10003; Verify Transaction
                     </button>
-                    {% if spent_ids %}
-                    <button type="button" class="btn-danger" onclick="triggerDoubleSpend({{ spent_ids[0] }})" title="Immediately tests spending an already spent Tx ID">
+                    <button type="button" class="btn-danger" onclick="triggerImmediateDoubleSpend()" title="Attempts to spend Jyothi's coins twice">
                         &#9888; Test Double Spend
                     </button>
-                    {% endif %}
                 </div>
 
             </form>
@@ -750,14 +735,14 @@
                         <span>&#9888;</span>
                         <div>
                             <strong>Double Spending Attack Prevented!</strong><br>
-                            The referenced Transaction Output (UTXO) has already been consumed in a prior block. The node rejected this transaction to prevent inflation.
+                            The sender has already spent their balance/coin in a previous block. The node rejected this duplicate spend to prevent unauthorized money creation!
                         </div>
                     </div>
                 {% elif status == 'success' %}
                     <div class="info-banner">
                         <span>&#9432;</span>
                         <div>
-                            <strong>Transaction Confirmed:</strong> Transaction cryptographically verified, double-spending check passed, and new block created on the chain.
+                            <strong>Transaction Confirmed:</strong> Transaction cryptographically verified, double-spending check passed, balance transferred, and block added to the chain.
                         </div>
                     </div>
                 {% endif %}
@@ -769,7 +754,7 @@
                     </svg>
                     <p>Submit a transaction to trigger the 4-step verification sequence:</p>
                     <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #6b7280;">
-                        1. Create &rarr; 2. Input Verify &rarr; 3. Signature Verify &rarr; 4. Double Spend Check
+                        1. Transaction Created &rarr; 2. Input Verified &rarr; 3. Signature Verified &rarr; 4. Double Spending Check
                     </p>
                 </div>
             {% endif %}
@@ -798,11 +783,10 @@
                         <tr>
                             <th>Tx ID</th>
                             <th>Sender</th>
-                            <th>Receiver (Owner)</th>
+                            <th>Receiver</th>
                             <th>Amount</th>
                             <th>Digital Signature</th>
                             <th>UTXO Status</th>
-                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -811,7 +795,7 @@
                                 <td class="mono">#{{ tx.id }}</td>
                                 <td>{{ tx.sender }}</td>
                                 <td><strong style="color: #93c5fd;">{{ tx.receiver }}</strong></td>
-                                <td class="mono" style="color: var(--accent-bitcoin); font-weight: 600;">{{ tx.amount }} BTC</td>
+                                <td class="mono" style="color: var(--accent-bitcoin); font-weight: 600;">{{ tx.amount }}</td>
                                 <td class="mono" style="color: var(--text-muted); font-size: 0.72rem;" title="{{ tx.signature }}">
                                     {{ tx.signature[:14] }}...{{ tx.signature[-8:] }}
                                 </td>
@@ -822,17 +806,6 @@
                                         <span class="status-badge unspent">&#10004; Unspent</span>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    {% if tx.is_spent %}
-                                        <button type="button" class="action-link" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);" onclick="triggerDoubleSpend({{ tx.id }})">
-                                            Test Double Spend
-                                        </button>
-                                    {% else %}
-                                        <button type="button" class="action-link" onclick="spendUTXO({{ tx.id }}, '{{ tx.receiver }}', {{ tx.amount }})">
-                                            Spend Tx #{{ tx.id }}
-                                        </button>
-                                    {% endif %}
-                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -841,7 +814,7 @@
         {% else %}
             <div class="empty-pipeline" style="padding: 2rem 1rem;">
                 <p>No transactions confirmed on the blockchain yet.</p>
-                <p style="font-size: 0.8rem; margin-top: 0.35rem; color: #6b7280;">Use the Faucet above to mint your first coins or send a transaction.</p>
+                <p style="font-size: 0.8rem; margin-top: 0.35rem; color: #6b7280;">Set Jyothi's account balance above to begin the demo.</p>
             </div>
         {% endif %}
     </div>
@@ -849,31 +822,21 @@
 </div>
 
 <script>
-    function selectTxid(id) {
-        const input = document.getElementById('txidInput');
-        input.value = id;
-        input.focus();
-        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
     function selectSender(user) {
         document.getElementById('senderInput').value = user;
         document.getElementById('senderInput').focus();
     }
 
-    function spendUTXO(txid, owner, maxAmount) {
-        document.getElementById('txidInput').value = txid;
-        document.getElementById('senderInput').value = owner;
-        document.getElementById('amountInput').value = maxAmount;
-        document.getElementById('receiverInput').focus();
+    function triggerImmediateDoubleSpend() {
+        document.getElementById('senderInput').value = 'Jyothi';
+        document.getElementById('receiverInput').value = 'Yasha';
+        document.getElementById('amountInput').value = '100';
+        document.getElementById('txidInput').value = ''; // auto-picks spent coin
+        document.getElementById('txForm').submit();
     }
 
-    function triggerDoubleSpend(spentId) {
-        document.getElementById('txidInput').value = spentId;
-        document.getElementById('senderInput').value = 'attacker';
-        document.getElementById('receiverInput').value = 'victim';
-        document.getElementById('amountInput').value = '100';
-        document.getElementById('txForm').submit();
+    function simulateFullAttack() {
+        triggerImmediateDoubleSpend();
     }
 </script>
 

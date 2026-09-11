@@ -225,10 +225,47 @@ def faucet_mint(receiver, amount=100):
     return tx_id
 
 
+def set_account_balance(user_name, amount=100):
+    """
+    Sets or resets an account balance for a user by minting a fresh unspent transaction.
+    """
+    clean_user = user_name.strip()
+    return faucet_mint(clean_user, amount)
+
+
+def get_sender_spend_candidate(sender_name):
+    """
+    Auto-detects which transaction output (UTXO) the sender is attempting to spend:
+    1. If the sender has an unspent UTXO, returns that unspent txid.
+    2. If all of the sender's UTXOs are already spent, returns their most recent spent txid,
+       which will accurately trigger Double Spending Detection!
+    3. If the sender never had any transaction, returns 1.
+    """
+    clean_sender = sender_name.strip().lower()
+    spent_set = set(get_spent_ids())
+    
+    cursor.execute("SELECT id, receiver, amount FROM transactions ORDER BY id DESC")
+    rows = cursor.fetchall()
+    
+    sender_rows = [r for r in rows if r[1].strip().lower() == clean_sender]
+    
+    if not sender_rows:
+        return 1
+    
+    # Check for unspent coin
+    for tx_id, receiver, amount in sender_rows:
+        if tx_id not in spent_set:
+            return tx_id
+            
+    # All coins have been spent -> return the spent txid to demonstrate double spending!
+    return sender_rows[0][0]
+
+
 def reset_database():
     cursor.execute("DELETE FROM transactions")
     cursor.execute("DELETE FROM spent")
     cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'spent')")
     conn.commit()
+
 
 

@@ -11,6 +11,8 @@ from blockchain import (
     get_unspent_ids,
     get_wallet_balances,
     get_user_utxos,
+    get_sender_spend_candidate,
+    set_account_balance,
     faucet_mint,
     reset_database
 )
@@ -43,10 +45,14 @@ def index():
         except ValueError:
             amount = 0
 
-        try:
-            txid = int(txid_raw) if txid_raw else suggested_txid
-        except ValueError:
-            txid = 1
+        # Auto-detect UTXO if user didn't manually specify one
+        if txid_raw:
+            try:
+                txid = int(txid_raw)
+            except ValueError:
+                txid = 1
+        else:
+            txid = get_sender_spend_candidate(sender)
 
         submitted_txid = txid
 
@@ -54,8 +60,8 @@ def index():
         message, signature = create_transaction(sender, receiver, amount)
         result.append("Transaction Created ✔")
 
-        # 2. Input verification (verifies sender, amount, and UTXO ownership/balance)
-        input_check = verify_input(sender, amount, txid=txid)
+        # 2. Input verification (verifies sender name and positive amount)
+        input_check = verify_input(sender, amount)
         if input_check:
             result.append("Input Verified ✔")
         else:
@@ -97,9 +103,9 @@ def index():
 
         # 4. Double spending check
         if double_spending(txid):
-            result.append(f"Double Spending Check Passed ✔ (Tx #{txid} is unspent)")
+            result.append(f"Double Spending Check Passed ✔ (Sender '{sender}' spent {amount} BTC from Tx #{txid})")
         else:
-            result.append(f"Double Spending Detected ❌ (Tx #{txid} has already been spent!)")
+            result.append(f"Double Spending Detected ❌ (Sender '{sender}' has already spent this balance / Tx #{txid} was already consumed!)")
             return render_template(
                 "index.html",
                 result=result,
@@ -144,6 +150,20 @@ def index():
     )
 
 
+@app.route("/set_balance", methods=["POST"])
+def set_balance():
+    user = request.form.get("user", "jyothi").strip()
+    amount_raw = request.form.get("balance", "100").strip()
+    try:
+        amount = int(amount_raw)
+    except ValueError:
+        amount = 100
+
+    if user and amount > 0:
+        set_account_balance(user, amount)
+    return redirect(url_for("index"))
+
+
 @app.route("/faucet", methods=["POST"])
 def faucet():
     receiver = request.form.get("faucet_user", "jyothi").strip()
@@ -166,5 +186,6 @@ def reset():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
 
 
