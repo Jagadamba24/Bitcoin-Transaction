@@ -101,11 +101,11 @@ def index():
                 txid=submitted_txid
             )
 
-        # 4. Double spending check
-        if double_spending(txid):
-            result.append(f"Double Spending Check Passed ✔ (Sender '{sender}' spent {amount} BTC from Tx #{txid})")
+        # 4. Double spending check (detects duplicate send to same person OR re-spending a spent coin)
+        if double_spending(txid, sender=sender, receiver=receiver, amount=amount):
+            result.append(f"Double Spending Check Passed ✔ (Sender '{sender}' transferred {amount} to '{receiver}')")
         else:
-            result.append(f"Double Spending Detected ❌ (Sender '{sender}' has already spent this balance / Tx #{txid} was already consumed!)")
+            result.append(f"Double Spending Detected ❌ (Sender '{sender}' already sent {amount} to '{receiver}' / Coin was already spent!)")
             return render_template(
                 "index.html",
                 result=result,
@@ -120,6 +120,7 @@ def index():
                 amount=amount_raw,
                 txid=submitted_txid
             )
+
 
         # 5. Add Block to Blockchain and record confirmed transaction
         block = add_block(message)
@@ -152,12 +153,12 @@ def index():
 
 @app.route("/set_balance", methods=["POST"])
 def set_balance():
-    user = request.form.get("user", "jyothi").strip()
-    amount_raw = request.form.get("balance", "100").strip()
+    user = request.form.get("user", "").strip()
+    amount_raw = request.form.get("balance", "").strip()
     try:
         amount = int(amount_raw)
     except ValueError:
-        amount = 100
+        amount = 0
 
     if user and amount > 0:
         set_account_balance(user, amount)
@@ -166,12 +167,12 @@ def set_balance():
 
 @app.route("/faucet", methods=["POST"])
 def faucet():
-    receiver = request.form.get("faucet_user", "jyothi").strip()
-    amount_raw = request.form.get("faucet_amount", "100").strip()
+    receiver = request.form.get("faucet_user", "").strip()
+    amount_raw = request.form.get("faucet_amount", "").strip()
     try:
         amount = int(amount_raw)
     except ValueError:
-        amount = 100
+        amount = 0
 
     if receiver and amount > 0:
         faucet_mint(receiver, amount)

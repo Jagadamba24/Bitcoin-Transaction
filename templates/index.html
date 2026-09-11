@@ -573,22 +573,19 @@
         </p>
     </header>
 
-    <!-- Scenario Walkthrough Card -->
+    <!-- Generic Scenario Walkthrough Card -->
     <div class="scenario-box">
         <div class="scenario-text">
-            <strong>Demonstration Scenario:</strong><br>
-            1. <strong>Set Balance</strong>: Jyothi sets her account balance to <strong>100</strong>.<br>
-            2. <strong>First Send</strong>: Jyothi sends 100 to Yasha &rarr; Balance decreases to <strong>0</strong> &rarr; Check Passes ✔.<br>
-            3. <strong>Second Send (Double Spending)</strong>: Jyothi tries to send 100 to Yasha again &rarr; Balance is 0 &rarr; <strong>Double Spending Detected ❌</strong>!
+            <strong>How to Demonstrate Double-Spending:</strong><br>
+            1. <strong>Set Balance</strong>: Enter any user name and an initial balance below.<br>
+            2. <strong>First Send</strong>: Transfer the balance to any receiver &rarr; Balance decreases &rarr; Check Passes ✔.<br>
+            3. <strong>Second Send (Double Spending)</strong>: Attempt to send again with no balance remaining &rarr; <strong>Double Spending Detected ❌</strong>!
             <div class="scenario-steps">
-                <span class="scenario-pill">&#9312; Set Balance: Jyothi = 100</span>
-                <span class="scenario-pill">&#9313; Send 100 to Yasha (Passes ✔)</span>
-                <span class="scenario-pill">&#9314; Send 100 again (Double Spend ❌)</span>
+                <span class="scenario-pill">&#9312; Set Any User Balance</span>
+                <span class="scenario-pill">&#9313; Send Funds (Passes ✔)</span>
+                <span class="scenario-pill">&#9314; Send Again (Double Spend ❌)</span>
             </div>
         </div>
-        <button type="button" class="btn-danger" onclick="simulateFullAttack()" style="font-size: 0.82rem; padding: 0.65rem 1rem;">
-            &#9888; Run Jyothi Double Spend
-        </button>
     </div>
 
     <!-- Wallet Balances & Balance Setup Bar -->
@@ -601,7 +598,7 @@
                 Participant Account Balances
             </div>
             <span style="font-size: 0.78rem; color: var(--text-muted);">
-                Click any wallet card to select as sender
+                Click any wallet card to auto-fill as sender
             </span>
         </div>
 
@@ -614,23 +611,23 @@
                             <span style="font-size: 0.7rem; color: var(--accent-bitcoin);">&#x27A4; Send</span>
                         </div>
                         <div class="wallet-balance">
-                            {{ balance }} <span>Rupees / BTC</span>
+                            {{ balance }} <span>Coins</span>
                         </div>
                     </div>
                 {% endfor %}
             </div>
         {% else %}
             <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1rem;">
-                No active balances. Set an account balance below to get started.
+                No active balances. Enter an account name and balance below to get started.
             </p>
         {% endif %}
 
-        <!-- Set Account Balance Form -->
+        <!-- Set Account Balance Form (No hardcoded values) -->
         <div class="balance-setup-bar">
             <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-bitcoin);">&#128176; Set Account Balance:</span>
             <form action="/set_balance" method="POST">
-                <input type="text" name="user" id="faucetUser" placeholder="Account Name (e.g. Jyothi)" required value="Jyothi" style="width: 140px;">
-                <input type="number" name="balance" id="faucetBalance" placeholder="Balance" value="100" min="1" required style="width: 100px;">
+                <input type="text" name="user" id="faucetUser" placeholder="Enter Account Name" required value="" style="width: 170px;">
+                <input type="number" name="balance" id="faucetBalance" placeholder="Enter Balance" min="1" required value="" style="width: 120px;">
                 <button type="submit" class="btn-faucet">&#43; Set Balance</button>
             </form>
             <form action="/reset" method="POST" style="margin-left: auto;">
@@ -644,7 +641,7 @@
     <!-- Main Grid: Transaction Form & Pipeline Results -->
     <div class="grid">
         
-        <!-- Left: Transaction Form -->
+        <!-- Left: Transaction Form (No hardcoded values) -->
         <div class="glass-card">
             <div class="card-header">
                 <div class="card-title">
@@ -659,17 +656,17 @@
                 
                 <div class="form-group">
                     <label for="senderInput">Sender Name:</label>
-                    <input type="text" id="senderInput" name="sender" value="{{ sender if sender else 'Jyothi' }}" required placeholder="e.g. Jyothi">
+                    <input type="text" id="senderInput" name="sender" value="{{ sender }}" required placeholder="Enter sender name">
                 </div>
 
                 <div class="form-group">
                     <label for="receiverInput">Receiver Name:</label>
-                    <input type="text" id="receiverInput" name="receiver" value="{{ receiver if receiver else 'Yasha' }}" required placeholder="e.g. Yasha">
+                    <input type="text" id="receiverInput" name="receiver" value="{{ receiver }}" required placeholder="Enter receiver name">
                 </div>
 
                 <div class="form-group">
-                    <label for="amountInput">Amount (Rupees / BTC):</label>
-                    <input type="number" id="amountInput" name="amount" value="{{ amount if amount else '100' }}" min="1" required placeholder="e.g. 100">
+                    <label for="amountInput">Amount:</label>
+                    <input type="number" id="amountInput" name="amount" value="{{ amount }}" min="1" required placeholder="Enter amount">
                 </div>
 
                 <!-- Transaction ID to spend (UTXO - Optional) -->
@@ -677,7 +674,7 @@
                     <label for="txidInput">Transaction Output ID to Spend (Optional):</label>
                     <input type="number" id="txidInput" name="txid" value="" placeholder="Auto-detected from sender's balance">
                     <div class="input-hint">
-                        Leave blank to automatically spend Jyothi's coin. If Jyothi has 0 balance, sending again will auto-trigger <strong>Double Spending Detected</strong>!
+                        Leave blank to auto-detect from sender's balance. If sender's balance is 0, sending again will trigger <strong>Double Spending Detected</strong>!
                     </div>
                 </div>
 
@@ -685,7 +682,7 @@
                     <button type="submit" class="btn-primary" id="btnVerify">
                         &#10003; Verify Transaction
                     </button>
-                    <button type="button" class="btn-danger" onclick="triggerImmediateDoubleSpend()" title="Attempts to spend Jyothi's coins twice">
+                    <button type="button" class="btn-danger" onclick="triggerImmediateDoubleSpend()" title="Attempts to spend the entered sender's balance again">
                         &#9888; Test Double Spend
                     </button>
                 </div>
@@ -814,7 +811,7 @@
         {% else %}
             <div class="empty-pipeline" style="padding: 2rem 1rem;">
                 <p>No transactions confirmed on the blockchain yet.</p>
-                <p style="font-size: 0.8rem; margin-top: 0.35rem; color: #6b7280;">Set Jyothi's account balance above to begin the demo.</p>
+                <p style="font-size: 0.8rem; margin-top: 0.35rem; color: #6b7280;">Set any user's account balance above to begin the demo.</p>
             </div>
         {% endif %}
     </div>
@@ -828,15 +825,14 @@
     }
 
     function triggerImmediateDoubleSpend() {
-        document.getElementById('senderInput').value = 'Jyothi';
-        document.getElementById('receiverInput').value = 'Yasha';
-        document.getElementById('amountInput').value = '100';
-        document.getElementById('txidInput').value = ''; // auto-picks spent coin
+        const sender = document.getElementById('senderInput').value.trim();
+        if (!sender) {
+            alert('Please enter a sender name first!');
+            document.getElementById('senderInput').focus();
+            return;
+        }
+        document.getElementById('txidInput').value = '';
         document.getElementById('txForm').submit();
-    }
-
-    function simulateFullAttack() {
-        triggerImmediateDoubleSpend();
     }
 </script>
 

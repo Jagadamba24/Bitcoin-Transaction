@@ -122,18 +122,32 @@ def verify_signature(message, signature):
         return False
 
 
-def double_spending(txid):
+def double_spending(txid=None, sender=None, receiver=None, amount=None):
 
-    cursor.execute("SELECT * FROM spent WHERE txid=?", (txid,))
-    result = cursor.fetchone()
+    # 1. Check if the exact same transaction (same sender, same receiver, same amount) was already sent
+    if sender and receiver and amount and sender.strip().upper() != "COINBASE_FAUCET":
+        cursor.execute(
+            "SELECT id FROM transactions WHERE LOWER(sender) = LOWER(?) AND LOWER(receiver) = LOWER(?) AND amount = ?",
+            (sender.strip(), receiver.strip(), amount)
+        )
+        duplicate_tx = cursor.fetchone()
+        if duplicate_tx:
+            # Double spending detected: sender is re-sending the exact same amount to the same person!
+            return False
 
-    if result:
-        return False
+    # 2. Check if this specific UTXO (txid) has already been spent
+    if txid is not None:
+        cursor.execute("SELECT * FROM spent WHERE txid=?", (txid,))
+        result = cursor.fetchone()
 
-    cursor.execute("INSERT INTO spent(txid) VALUES (?)", (txid,))
-    conn.commit()
+        if result:
+            return False
+
+        cursor.execute("INSERT INTO spent(txid) VALUES (?)", (txid,))
+        conn.commit()
 
     return True
+
 
 
 def add_block(message):
