@@ -82,21 +82,13 @@ def index():
         # 4. Double spending check (detects duplicate send to same person OR spending more than balance)
         is_valid, ds_msg = double_spending(sender=sender, receiver=receiver, amount=amount)
         if is_valid:
-            result.append(f"Double Spending Check Passed ✔ ({amount} coins available & unspent)")
+            result.append(f"Double Spending Check Passed ✔")
+            status = "success"
         else:
             result.append(f"Double Spending Detected ❌ ({ds_msg})")
-            return render_template(
-                "index.html",
-                result=result,
-                status="danger",
-                ledger=get_ledger(),
-                wallet_balances=get_wallet_balances(),
-                sender=sender,
-                receiver=receiver,
-                amount=amount_raw
-            )
+            status = "danger"
 
-        # 5. Add Block to Blockchain and record confirmed transaction
+        # 5. Add Block to Blockchain and record confirmed transaction (Do not block!)
         block = add_block(message)
         record_transaction(sender, receiver, amount, signature)
         
@@ -105,11 +97,11 @@ def index():
         credit_balance(receiver, amount)
 
         result.append(f"Block Added to Blockchain ✔ (hash: {block[:10]}...)")
-        status = "success"
 
         # Refresh ledger and balances after transaction
         ledger = get_ledger()
         wallet_balances = get_wallet_balances()
+
 
     return render_template(
         "index.html",
