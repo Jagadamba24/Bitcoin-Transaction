@@ -14,6 +14,7 @@ from blockchain import (
     set_account_balance,
     deduct_balance,
     credit_balance,
+    delete_account,
     reset_database
 )
 
@@ -126,6 +127,14 @@ def set_balance():
 
     if user and amount > 0:
         set_account_balance(user, amount)
+    return redirect(url_for("index"))
+
+
+@app.route("/remove_account", methods=["POST"])
+def remove_account():
+    user = request.form.get("user", "").strip()
+    if user:
+        delete_account(user)
     return redirect(url_for("index"))
 
 

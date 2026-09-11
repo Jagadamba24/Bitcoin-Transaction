@@ -224,9 +224,19 @@ def get_unspent_ids():
     return [txid for txid in all_ids if txid not in spent_set]
 
 
+def delete_account(username):
+    if not username:
+        return
+    clean_user = username.strip()
+    cursor.execute("DELETE FROM accounts WHERE LOWER(username) = LOWER(?)", (clean_user,))
+    cursor.execute("DELETE FROM transactions WHERE LOWER(sender) = LOWER(?) OR LOWER(receiver) = LOWER(?)", (clean_user, clean_user))
+    conn.commit()
+
+
 def reset_database():
     cursor.execute("DELETE FROM transactions")
     cursor.execute("DELETE FROM spent")
     cursor.execute("DELETE FROM accounts")
     cursor.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'spent', 'accounts')")
     conn.commit()
+
