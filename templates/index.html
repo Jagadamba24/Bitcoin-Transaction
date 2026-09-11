@@ -1,38 +1,881 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Bitcoin Transaction Verification</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Transaction Verification, UTXO Balances & Double Spending Defense</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0d14;
+            --bg-card: rgba(18, 24, 38, 0.75);
+            --bg-card-border: rgba(255, 255, 255, 0.08);
+            --bg-input: rgba(10, 14, 23, 0.85);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-bitcoin: #f7931a;
+            --accent-bitcoin-glow: rgba(247, 147, 26, 0.25);
+            --accent-cyan: #00f2fe;
+            --success-green: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --danger-red: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.25);
+            --warning-amber: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(247, 147, 26, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 20%, rgba(0, 242, 254, 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2.5rem 1rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1140px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.2rem;
+        }
+
+        .badge-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.9rem;
+            background: rgba(247, 147, 26, 0.12);
+            border: 1px solid rgba(247, 147, 26, 0.3);
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--accent-bitcoin);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.8rem;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--accent-bitcoin);
+            box-shadow: 0 0 8px var(--accent-bitcoin);
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.6rem;
+            background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 80%, var(--accent-bitcoin) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.96rem;
+            color: var(--text-muted);
+            max-width: 720px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--bg-card-border);
+            border-radius: 1.25rem;
+            padding: 1.7rem;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            position: relative;
+            margin-bottom: 1.8rem;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.3rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .card-title svg {
+            width: 22px;
+            height: 22px;
+            color: var(--accent-bitcoin);
+        }
+
+        /* Wallet Balances Section */
+        .wallets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .wallet-card {
+            background: rgba(10, 14, 23, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.9rem;
+            padding: 1rem 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .wallet-card:hover {
+            border-color: var(--accent-bitcoin);
+            transform: translateY(-2px);
+            background: rgba(247, 147, 26, 0.06);
+        }
+
+        .wallet-owner {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .wallet-balance {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .wallet-balance span {
+            color: var(--accent-bitcoin);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        /* Faucet Section */
+        .faucet-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.85rem 1.1rem;
+            background: rgba(247, 147, 26, 0.06);
+            border: 1px dashed rgba(247, 147, 26, 0.3);
+            border-radius: 0.85rem;
+            flex-wrap: wrap;
+        }
+
+        .faucet-bar form {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+
+        .faucet-bar input {
+            background: var(--bg-input);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            padding: 0.45rem 0.8rem;
+            color: #ffffff;
+            font-size: 0.84rem;
+        }
+
+        /* Main Form & Pipeline Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.8rem;
+            margin-bottom: 1.8rem;
+        }
+
+        @media (max-width: 880px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #d1d5db;
+            margin-bottom: 0.45rem;
+        }
+
+        .input-hint {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+            line-height: 1.4;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            border-color: var(--accent-bitcoin);
+            box-shadow: 0 0 0 3px var(--accent-bitcoin-glow);
+        }
+
+        .chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .chip {
+            padding: 0.25rem 0.65rem;
+            border-radius: 0.5rem;
+            font-size: 0.74rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+        }
+
+        .chip.unspent {
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .chip.unspent:hover {
+            background: rgba(16, 185, 129, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .chip.spent {
+            background: rgba(239, 68, 68, 0.12);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .chip.spent:hover {
+            background: rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.8rem;
+            margin-top: 1.6rem;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            flex: 1;
+            background: linear-gradient(135deg, #f7931a, #e67e00);
+            color: #ffffff;
+            padding: 0.85rem 1.4rem;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 18px var(--accent-bitcoin-glow);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #ff9f2c, #f7931a);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(247, 147, 26, 0.4);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            padding: 0.85rem 1.1rem;
+            font-size: 0.88rem;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.28);
+            border-color: var(--danger-red);
+            color: #ffffff;
+        }
+
+        .btn-faucet {
+            background: rgba(247, 147, 26, 0.2);
+            color: #fbd38d;
+            border: 1px solid rgba(247, 147, 26, 0.4);
+            padding: 0.45rem 0.9rem;
+            font-size: 0.82rem;
+            border-radius: 0.5rem;
+        }
+
+        .btn-faucet:hover {
+            background: rgba(247, 147, 26, 0.35);
+            color: #ffffff;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 0.4rem 0.8rem;
+            font-size: 0.78rem;
+            border-radius: 0.5rem;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Result Verification Pipeline */
+        .pipeline-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .pipeline-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            margin-top: 0.6rem;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.85rem 1.1rem;
+            background: rgba(10, 14, 23, 0.6);
+            border-radius: 0.85rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.92rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .step-item.success {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: rgba(16, 185, 129, 0.08);
+            color: #a7f3d0;
+        }
+
+        .step-item.danger {
+            border-color: rgba(239, 68, 68, 0.45);
+            background: rgba(239, 68, 68, 0.12);
+            color: #fca5a5;
+            animation: pulse-danger 1.8s infinite;
+        }
+
+        @keyframes pulse-danger {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+        }
+
+        .step-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-item.success .step-icon {
+            background: var(--success-green);
+            color: #042f2e;
+        }
+
+        .step-item.danger .step-icon {
+            background: var(--danger-red);
+            color: #450a0a;
+        }
+
+        .step-text {
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .empty-pipeline {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .empty-pipeline svg {
+            width: 44px;
+            height: 44px;
+            margin-bottom: 0.9rem;
+            color: #374151;
+        }
+
+        /* Ledger Table */
+        .ledger-table-wrapper {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        th {
+            background: rgba(10, 14, 23, 0.85);
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #9ca3af;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: #e5e7eb;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.74rem;
+            font-weight: 600;
+        }
+
+        .status-badge.unspent {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-badge.spent {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .action-link {
+            color: var(--accent-bitcoin);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.78rem;
+            cursor: pointer;
+            padding: 0.25rem 0.55rem;
+            border-radius: 0.4rem;
+            border: 1px solid rgba(247, 147, 26, 0.2);
+            transition: all 0.15s;
+        }
+
+        .action-link:hover {
+            background: rgba(247, 147, 26, 0.15);
+            border-color: var(--accent-bitcoin);
+        }
+
+        .info-banner {
+            margin-top: 1.2rem;
+            padding: 0.85rem 1.1rem;
+            background: rgba(247, 147, 26, 0.08);
+            border: 1px solid rgba(247, 147, 26, 0.2);
+            border-radius: 0.75rem;
+            font-size: 0.82rem;
+            color: #fed7aa;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            line-height: 1.5;
+        }
+    </style>
 </head>
 <body>
 
-    <h1>Bitcoin Transaction Verification</h1>
+<div class="container">
 
-    <form method="POST">
+    <!-- Header -->
+    <header>
+        <div class="badge-tag">
+            <span class="badge-dot"></span>
+            Bitcoin Core Simulation
+        </div>
+        <h1>Bitcoin Transaction Verification</h1>
+        <p class="subtitle">
+            Demonstrates the full Bitcoin transaction validation lifecycle: 
+            Input Verification &rarr; Digital Signature Verification &rarr; Double Spending Detection &rarr; Block Confirmation.
+        </p>
+    </header>
 
-        <label>Sender:</label>
-        <input type="text" name="sender" required>
-        <br><br>
+    <!-- Wallet Balances & Faucet Bar -->
+    <div class="glass-card">
+        <div class="card-header">
+            <div class="card-title">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+                Participant Wallet Balances (Unspent UTXOs)
+            </div>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">
+                Click any wallet to select as sender
+            </span>
+        </div>
 
-        <label>Receiver:</label>
-        <input type="text" name="receiver" required>
-        <br><br>
+        {% if wallet_balances %}
+            <div class="wallets-grid">
+                {% for user, balance in wallet_balances.items() %}
+                    <div class="wallet-card" onclick="selectSender('{{ user }}')">
+                        <div class="wallet-owner">
+                            {{ user }}
+                            <span style="font-size: 0.7rem; color: var(--accent-bitcoin);">&#x27A4; Send</span>
+                        </div>
+                        <div class="wallet-balance">
+                            {{ balance }} <span>BTC</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 1rem;">
+                No unspent balances available. Use the Faucet below to mint initial test BTC.
+            </p>
+        {% endif %}
 
-        <label>Amount:</label>
-        <input type="number" name="amount" min="1" required>
-        <br><br>
+        <!-- Faucet Form -->
+        <div class="faucet-bar">
+            <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-bitcoin);">&#9889; Testnet Faucet:</span>
+            <form action="/faucet" method="POST">
+                <input type="text" name="faucet_user" placeholder="Recipient (e.g. jyothi)" required value="jyothi" style="width: 140px;">
+                <input type="number" name="faucet_amount" placeholder="Amount" value="100" min="1" required style="width: 90px;">
+                <button type="submit" class="btn-faucet">&#43; Mint Test BTC</button>
+            </form>
+            <form action="/reset" method="POST" style="margin-left: auto;">
+                <button type="submit" class="btn-outline" title="Reset all transactions and spent logs">
+                    &#x21bb; Reset Blockchain
+                </button>
+            </form>
+        </div>
+    </div>
 
-        <button type="submit">Verify Transaction</button>
+    <!-- Main Grid: Transaction Form & Pipeline Results -->
+    <div class="grid">
+        
+        <!-- Left: Transaction Form -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    New Transaction
+                </div>
+            </div>
 
-    </form>
+            <form method="POST" id="txForm">
+                
+                <!-- Transaction ID to spend (UTXO) -->
+                <div class="form-group">
+                    <label for="txidInput">Transaction ID to Spend (UTXO):</label>
+                    <input type="number" id="txidInput" name="txid" value="{{ txid if txid else suggested_txid }}" min="1" required placeholder="e.g. 1">
+                    <div class="input-hint">
+                        Select an unspent Tx ID to verify successfully, or select an already-spent Tx ID to test <strong>Double Spending Detection</strong>.
+                    </div>
+                    
+                    {% if spent_ids or unspent_ids %}
+                    <div class="chips-container">
+                        {% for uid in unspent_ids %}
+                            <span class="chip unspent" onclick="selectTxid({{ uid }})" title="Click to spend unspent Tx #{{ uid }}">
+                                &#10003; Spend Tx #{{ uid }} (Unspent)
+                            </span>
+                        {% endfor %}
+                        {% for sid in spent_ids %}
+                            <span class="chip spent" onclick="selectTxid({{ sid }})" title="Click to trigger double-spending on Tx #{{ sid }}">
+                                &#9888; Tx #{{ sid }} (Already Spent)
+                            </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
 
-    {% if result %}
-        <h2>Transaction Result</h2>
+                <div class="form-group">
+                    <label for="senderInput">Sender Name:</label>
+                    <input type="text" id="senderInput" name="sender" value="{{ sender if sender else 'jyothi' }}" required placeholder="e.g. Alice">
+                </div>
 
-        {% for message in result %}
-            <p>{{ message }}</p>
-        {% endfor %}
+                <div class="form-group">
+                    <label for="receiverInput">Receiver Name:</label>
+                    <input type="text" id="receiverInput" name="receiver" value="{{ receiver if receiver else 'yasha' }}" required placeholder="e.g. Bob">
+                </div>
 
-    {% endif %}
+                <div class="form-group">
+                    <label for="amountInput">Amount (BTC):</label>
+                    <input type="number" id="amountInput" name="amount" value="{{ amount if amount else '50' }}" min="1" required placeholder="e.g. 10">
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn-primary" id="btnVerify">
+                        &#10003; Verify Transaction
+                    </button>
+                    {% if spent_ids %}
+                    <button type="button" class="btn-danger" onclick="triggerDoubleSpend({{ spent_ids[0] }})" title="Immediately tests spending an already spent Tx ID">
+                        &#9888; Test Double Spend
+                    </button>
+                    {% endif %}
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Right: Verification Pipeline Result -->
+        <div class="glass-card pipeline-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    Verification Pipeline
+                </div>
+                {% if status == 'success' %}
+                    <span class="status-badge unspent">&#10004; Verified & Added</span>
+                {% elif status == 'danger' %}
+                    <span class="status-badge spent">&#10008; Double Spend Blocked</span>
+                {% elif status == 'error' %}
+                    <span class="status-badge spent">&#10008; Verification Failed</span>
+                {% else %}
+                    <span class="badge-tag" style="margin:0; font-size: 0.7rem;">Idle</span>
+                {% endif %}
+            </div>
+
+            {% if result %}
+                <div class="pipeline-steps">
+                    {% for msg in result %}
+                        {% if '❌' in msg or 'Failed' in msg or 'Detected' in msg or 'Invalid' in msg %}
+                            <div class="step-item danger">
+                                <span class="step-icon">&#10008;</span>
+                                <span class="step-text">{{ msg }}</span>
+                            </div>
+                        {% else %}
+                            <div class="step-item success">
+                                <span class="step-icon">&#10004;</span>
+                                <span class="step-text">{{ msg }}</span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                {% if status == 'danger' %}
+                    <div class="info-banner" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5;">
+                        <span>&#9888;</span>
+                        <div>
+                            <strong>Double Spending Attack Prevented!</strong><br>
+                            The referenced Transaction Output (UTXO) has already been consumed in a prior block. The node rejected this transaction to prevent inflation.
+                        </div>
+                    </div>
+                {% elif status == 'success' %}
+                    <div class="info-banner">
+                        <span>&#9432;</span>
+                        <div>
+                            <strong>Transaction Confirmed:</strong> Transaction cryptographically verified, double-spending check passed, and new block created on the chain.
+                        </div>
+                    </div>
+                {% endif %}
+
+            {% else %}
+                <div class="empty-pipeline">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <p>Submit a transaction to trigger the 4-step verification sequence:</p>
+                    <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #6b7280;">
+                        1. Create &rarr; 2. Input Verify &rarr; 3. Signature Verify &rarr; 4. Double Spend Check
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Ledger & UTXO Tracker Section -->
+    <div class="glass-card">
+        <div class="card-header">
+            <div class="card-title">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                Blockchain Ledger & UTXO Tracker
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">
+                Total Confirmed Blocks: <strong>{{ ledger|length }}</strong>
+            </div>
+        </div>
+
+        {% if ledger %}
+            <div class="ledger-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tx ID</th>
+                            <th>Sender</th>
+                            <th>Receiver (Owner)</th>
+                            <th>Amount</th>
+                            <th>Digital Signature</th>
+                            <th>UTXO Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in ledger %}
+                            <tr>
+                                <td class="mono">#{{ tx.id }}</td>
+                                <td>{{ tx.sender }}</td>
+                                <td><strong style="color: #93c5fd;">{{ tx.receiver }}</strong></td>
+                                <td class="mono" style="color: var(--accent-bitcoin); font-weight: 600;">{{ tx.amount }} BTC</td>
+                                <td class="mono" style="color: var(--text-muted); font-size: 0.72rem;" title="{{ tx.signature }}">
+                                    {{ tx.signature[:14] }}...{{ tx.signature[-8:] }}
+                                </td>
+                                <td>
+                                    {% if tx.is_spent %}
+                                        <span class="status-badge spent">&#10008; Spent</span>
+                                    {% else %}
+                                        <span class="status-badge unspent">&#10004; Unspent</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if tx.is_spent %}
+                                        <button type="button" class="action-link" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);" onclick="triggerDoubleSpend({{ tx.id }})">
+                                            Test Double Spend
+                                        </button>
+                                    {% else %}
+                                        <button type="button" class="action-link" onclick="spendUTXO({{ tx.id }}, '{{ tx.receiver }}', {{ tx.amount }})">
+                                            Spend Tx #{{ tx.id }}
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-pipeline" style="padding: 2rem 1rem;">
+                <p>No transactions confirmed on the blockchain yet.</p>
+                <p style="font-size: 0.8rem; margin-top: 0.35rem; color: #6b7280;">Use the Faucet above to mint your first coins or send a transaction.</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+    function selectTxid(id) {
+        const input = document.getElementById('txidInput');
+        input.value = id;
+        input.focus();
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function selectSender(user) {
+        document.getElementById('senderInput').value = user;
+        document.getElementById('senderInput').focus();
+    }
+
+    function spendUTXO(txid, owner, maxAmount) {
+        document.getElementById('txidInput').value = txid;
+        document.getElementById('senderInput').value = owner;
+        document.getElementById('amountInput').value = maxAmount;
+        document.getElementById('receiverInput').focus();
+    }
+
+    function triggerDoubleSpend(spentId) {
+        document.getElementById('txidInput').value = spentId;
+        document.getElementById('senderInput').value = 'attacker';
+        document.getElementById('receiverInput').value = 'victim';
+        document.getElementById('amountInput').value = '100';
+        document.getElementById('txForm').submit();
+    }
+</script>
 
 </body>
 </html>
